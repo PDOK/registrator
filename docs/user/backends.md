@@ -163,3 +163,22 @@ The JSON will contain all infromation about the published container service. As 
 Will result in the zookeeper path and JSON znode body:
 
     /basepath/www/80 = {"Name":"www","IP":"192.168.1.123","PublicPort":49153,"PrivatePort":80,"ContainerID":"9124853ff0d1","Tags":[],"Attrs":{}}
+
+
+## Eureka 
+
+When containers are starting they are registered to Eureka. 
+Registrator can check the health of the container and mark a container as DOWN then the health check fails.
+When a container defines a check, then the initial state will be STARTING.
+
+```bash
+SERVICE_80_CHECK_HTTP=/health/endpoint/path
+SERVICE_80_CHECK_INTERVAL=15   #default is 30, value is in seconds
+```
+
+By default when a service is registered in Eureka as starting when a check is defined, otherwise it is registered as UP. 
+You can specify a different initial health check status.
+
+```bash
+SERVICE_CHECK_INITIAL_STATUS=UP
+```
