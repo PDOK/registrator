@@ -11,6 +11,7 @@ import (
 	"time"
 	"net/http"
 	"io/ioutil"
+	"strings"
 )
 
 func init() {
@@ -61,14 +62,14 @@ func (r *EurekaAdapter) Ping() error {
 		return err
 	}
 	log.Println("Eureka AppsHashcode: ", eurekaApps.AppsHashcode)
-	log.Println("eureka: current apps ", eurekaApps)
 	return nil
 }
 
 func instanceInformation(service *bridge.Service) *eureka.InstanceInfo {
 
 	application := service.Name
-	hostname := service.IP
+	hostnameSplit := strings.SplitN(service.ID, ":", 2)
+	hostname := hostnameSplit[0]
 	ipadres := service.IP
 	port := service.Port
 
