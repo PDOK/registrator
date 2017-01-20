@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"io/ioutil"
 	"strings"
+	"github.com/docker/docker/client"
 )
 
 func init() {
@@ -77,6 +78,13 @@ func instanceInformation(service *bridge.Service) *eureka.InstanceInfo {
 	status := "UP"
 
 	registration := eureka.NewInstanceInfo(instanceId, hostname, application, ipadres, port, false, status) //Create a new instance to register
+
+	if path := service.Attrs["context_path"]; path != "" {
+		registration.Metadata = &eureka.MetaData{
+			Map: make(map[string]string),
+		}
+		registration.Metadata.Map["context-path"] = path
+	}
 	return registration
 }
 

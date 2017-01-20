@@ -182,3 +182,13 @@ You can specify a different initial health check status.
 ```bash
 SERVICE_CHECK_INITIAL_STATUS=UP
 ```
+
+Some application can have a context path at their server. This may be different per installation.
+Here it can be added to the registration, so the client can use it to invoke the service.
+This is added as context-path to the metadata in Eureka.
+
+```bash
+SERVICE_CONTEXT_PATH=/contextroot
+```
+
+
