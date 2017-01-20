@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"io/ioutil"
 	"strings"
-	"github.com/docker/docker/client"
 )
 
 func init() {
