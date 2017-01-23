@@ -147,10 +147,10 @@ func checkHealthTick(registeredService *RegisteredService, client *eureka.Client
 }
 
 func getCheckInterval(service *bridge.Service) int {
-	if service.Attrs["check_timeout"] != "" {
-		v, err := strconv.Atoi(service.Attrs["check_timeout"])
+	if service.Attrs["check_interval"] != "" {
+		v, err := strconv.Atoi(service.Attrs["check_interval"])
 		if err != nil {
-			log.Println("eureka: check_timeout must be valid int", err)
+			log.Println("eureka: check_interval must be valid int", err)
 			return 30
 		} else {
 			return v
@@ -174,9 +174,9 @@ func (r *EurekaAdapter) Register(service *bridge.Service) error {
 	if path := service.Attrs["check_http"]; path != "" {
 		registration.Status = "STARTING"
 		statusUrl := fmt.Sprintf("http://%s:%d%s", service.IP, service.Port, path)
-		timeout := getCheckInterval(service)
+		interval := getCheckInterval(service)
 		quit := make(chan struct{})
-		ticker := time.NewTicker(time.Duration(timeout) * time.Second)
+		ticker := time.NewTicker(time.Duration(interval) * time.Second)
 		registeredService = RegisteredService{registration: registration, ticker:ticker, stop:quit, statusUrl: statusUrl}
 		go checkHealthTick(&registeredService, r.client)
 	} else {
