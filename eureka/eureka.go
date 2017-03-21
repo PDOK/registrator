@@ -76,7 +76,7 @@ func instanceInformation(service *bridge.Service) *eureka.InstanceInfo {
 	instanceId := fmt.Sprintf("%s:%s:%d", hostname, application, port)
 	status := "UP"
 
-	registration := eureka.NewInstanceInfo(instanceId, hostname, application, ipadres, port, false, status) //Create a new instance to register
+	registration := eureka.NewInstanceInfo(instanceId, ipadres, application, ipadres, port, false, status) //Create a new instance to register
 
 	if path := service.Attrs["context_path"]; path != "" {
 		registration.Metadata = &eureka.MetaData{
