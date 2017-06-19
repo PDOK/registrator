@@ -161,7 +161,7 @@ func getCheckInterval(service *bridge.Service) int {
 }
 
 func skipService(service *bridge.Service) bool {
-	return (service.Port == 51234 && service.Name == "httpd")
+	return (service.Port == 51234 && (service.Name == "httpd" || service.Name == "ebb"))
 }
 
 func (r *EurekaAdapter) Register(service *bridge.Service) error {
