@@ -18,6 +18,15 @@ func init() {
 	bridge.Register(new(Factory), "eureka")
 }
 
+func getEnvironmentVariable(key string, defaulValue string) string {
+	v, found := os.LookupEnv(key)
+	if !found {
+		log.Println("Missing environment variable:", key)
+		return defaulValue
+	}
+	return v
+}
+
 func isDebugEnabled() bool {
 	v, found := os.LookupEnv("EUREKA_CLIENT_DEBUG")
 	if (!found) {
@@ -161,7 +170,7 @@ func getCheckInterval(service *bridge.Service) int {
 }
 
 func skipService(service *bridge.Service) bool {
-	return (service.Port == 51234 && (service.Name == "httpd" || service.Name == "ebb"))
+	return service.Port == 51234 && (service.Name == getEnvironmentVariable("PLP_HTTPD_SERVICE_NAME", "yoda-httpd"))
 }
 
 func (r *EurekaAdapter) Register(service *bridge.Service) error {
