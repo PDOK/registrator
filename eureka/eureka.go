@@ -48,12 +48,13 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		"http://" + uri.Host + uri.Path,
 	})
 
-	return &EurekaAdapter{client: client, registeredServices: make(map[string]RegisteredService)}
+	return &EurekaAdapter{client: client, registeredServices: make(map[string]RegisteredService), knownApplications: make(map[string]eureka.Application)}
 }
 
 type EurekaAdapter struct {
 	client             *eureka.Client
 	registeredServices map[string]RegisteredService
+	knownApplications  map[string]eureka.Application
 }
 
 type RegisteredService struct {
@@ -70,6 +71,23 @@ func (r *EurekaAdapter) Ping() error {
 	if err != nil {
 		return err
 	}
+
+	//Store current situation as known in Eureka for a while
+	for _, application := range eurekaApps.Applications {
+		r.knownApplications[application.Name] = application
+	}
+	log.Println("Already registered number of applications: " , len(r.knownApplications))
+
+	//Clear initial situation after 90 seconds, first refresh comes at 60 seconds (ttl)
+	timer := time.NewTimer(90 * time.Second)
+	go func() {
+		<- timer.C
+		for k := range r.knownApplications {
+			delete(r.knownApplications, k)
+		}
+		log.Println("Cleared the known applications")
+	}()
+
 	log.Println("Eureka AppsHashcode: ", eurekaApps.AppsHashcode)
 	return nil
 }
@@ -181,12 +199,39 @@ func (r *EurekaAdapter) Register(service *bridge.Service) error {
 
 	var registeredService RegisteredService
 	if path := service.Attrs["check_http"]; path != "" {
-		registration.Status = "STARTING"
 		statusUrl := fmt.Sprintf("http://%s:%d%s", service.IP, service.Port, path)
+
+		// In case of a restart/redeploy the container is probably already running for a long time, we should not mark it as STARTING
+		// In case of docker daemon all containers get restarted, so status might be wrong
+		oldRegistration, exactMatch := r.findOldRegistration(registration)
+		if oldRegistration != nil {
+			if !exactMatch {
+				//Potential ghost container, same application, same machine different port found after restart
+				_, existing := r.registeredServices[oldRegistration.InstanceId]
+				if !existing {
+					//Remove from Eureka
+					log.Println("Ghost container found with instanceId: " , oldRegistration.InstanceId)
+					r.client.UnregisterInstance(oldRegistration)
+					log.Println("Ghost container removed with instanceId: " , oldRegistration.InstanceId)
+				}
+				// Only a Ghost container found, so this new container is just starting
+				// Make the new container as starting
+				registration.Status = "STARTING"
+			} else {
+				// Same container (with same instanceID) is already registered, we directly check the real status
+				log.Println("Container with instanceId: ", oldRegistration.InstanceId , "found, directly checking its status")
+				registration.Status = getCurrentStatus(statusUrl)
+				log.Println("Container with instanceId: ", oldRegistration.InstanceId, " will get status: ", registration.Status)
+			}
+		} else {
+			// Mark container as starting
+			registration.Status = "STARTING"
+		}
+
 		interval := getCheckInterval(service)
 		quit := make(chan struct{})
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
-		registeredService = RegisteredService{registration: registration, ticker:ticker, stop:quit, statusUrl: statusUrl}
+		registeredService = RegisteredService{registration: registration, ticker: ticker, stop: quit, statusUrl: statusUrl}
 		go checkHealthTick(&registeredService, r.client)
 	} else {
 		registration.Status = "UP"
@@ -199,6 +244,22 @@ func (r *EurekaAdapter) Register(service *bridge.Service) error {
 	}
 	log.Println("Registering ", registration.InstanceId, "with status", registration.Status)
 	return r.client.RegisterInstance(registration)
+}
+
+func (r *EurekaAdapter) findOldRegistration(registration *eureka.InstanceInfo) (*eureka.InstanceInfo, bool) {
+	application, found := r.knownApplications[registration.App]
+	if found {
+		for _, instance := range application.Instances {
+			if instance.InstanceId == registration.InstanceId {
+				return &instance, true
+			}
+
+			if instance.IpAddr == registration.IpAddr {
+				return &instance, instance.Port == registration.Port
+			}
+		}
+	}
+	return nil, false
 }
 
 func (r *EurekaAdapter) Deregister(service *bridge.Service) error {
