@@ -106,12 +106,21 @@ func instanceInformation(service *bridge.Service) *eureka.InstanceInfo {
 	registration := eureka.NewInstanceInfo(instanceId, ipadres, application, ipadres, port, false, status) //Create a new instance to register
 
 	if path := service.Attrs["context_path"]; path != "" {
+		createMetadataMap(registration)
+		registration.Metadata.Map["context-path"] = path
+	}
+	if path := service.Attrs["depends_on"]; path != "" {
+		createMetadataMap(registration)
+		registration.Metadata.Map["depends_on"] = path
+	}
+	return registration
+}
+func createMetadataMap(registration *eureka.InstanceInfo) {
+	if registration.Metadata == nil {
 		registration.Metadata = &eureka.MetaData{
 			Map: make(map[string]string),
 		}
-		registration.Metadata.Map["context-path"] = path
 	}
-	return registration
 }
 
 func GetWithRetry(url string) (*http.Response, error) {
