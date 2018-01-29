@@ -7,6 +7,7 @@ Service registry bridge for Docker.
 <br /><br />
 
 This version has Eureka support, see [backends](docs/user/backends.md)
+NOTE: All other backends are removed due to compability issues with newer Go and dependency versions
 <br />
 
 Registrator automatically registers and deregisters services for any Docker
