@@ -48,13 +48,16 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		"http://" + uri.Host + uri.Path,
 	})
 
-	return &EurekaAdapter{client: client, registeredServices: make(map[string]RegisteredService), knownApplications: make(map[string]eureka.Application)}
+	serviceNames := strings.Split(getEnvironmentVariable("IGNORE_SERVICE_NAMES", "yoda-httpd"), ",")
+
+	return &EurekaAdapter{client: client, registeredServices: make(map[string]RegisteredService), knownApplications: make(map[string]eureka.Application), ignoreServiceNames: arrayToStringMap(serviceNames)}
 }
 
 type EurekaAdapter struct {
 	client             *eureka.Client
 	registeredServices map[string]RegisteredService
 	knownApplications  map[string]eureka.Application
+	ignoreServiceNames  map[string]string
 }
 
 type RegisteredService struct {
@@ -197,12 +200,13 @@ func getCheckInterval(service *bridge.Service) int {
 	}
 }
 
-func skipService(service *bridge.Service) bool {
-	return service.Port == 51234 && (service.Name == getEnvironmentVariable("PLP_HTTPD_SERVICE_NAME", "yoda-httpd"))
+func (r *EurekaAdapter) skipService(service *bridge.Service) bool {
+	_, serviceNameMatched := r.ignoreServiceNames[service.Name]
+	return service.Port == 51234 && serviceNameMatched
 }
 
 func (r *EurekaAdapter) Register(service *bridge.Service) error {
-	if skipService(service) {
+	if r.skipService(service) {
 		return nil
 	}
 	registration := instanceInformation(service)
@@ -273,7 +277,7 @@ func (r *EurekaAdapter) findOldRegistration(registration *eureka.InstanceInfo) (
 }
 
 func (r *EurekaAdapter) Deregister(service *bridge.Service) error {
-	if skipService(service) {
+	if r.skipService(service) {
 		return nil
 	}
 	registration := instanceInformation(service)
@@ -287,7 +291,7 @@ func (r *EurekaAdapter) Deregister(service *bridge.Service) error {
 }
 
 func (r *EurekaAdapter) Refresh(service *bridge.Service) error {
-	if skipService(service) {
+	if r.skipService(service) {
 		return nil
 	}
 	registration := instanceInformation(service)
@@ -302,4 +306,12 @@ func (r *EurekaAdapter) Refresh(service *bridge.Service) error {
 
 func (r *EurekaAdapter) Services() ([]*bridge.Service, error) {
 	return []*bridge.Service{}, nil
+}
+
+func arrayToStringMap(elements []string) map[string]string {
+	elementMap := make(map[string]string)
+	for _, s := range elements {
+		elementMap[s] = s
+	}
+	return elementMap
 }
