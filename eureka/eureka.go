@@ -48,7 +48,7 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 		"http://" + uri.Host + uri.Path,
 	})
 
-	serviceNames := strings.Split(getEnvironmentVariable("IGNORE_SERVICE_NAMES", "yoda-httpd"), ",")
+	serviceNames := strings.Split(strings.ToLower(getEnvironmentVariable("IGNORE_SERVICE_NAMES", "yoda-httpd")), ",")
 
 	return &EurekaAdapter{client: client, registeredServices: make(map[string]RegisteredService), knownApplications: make(map[string]eureka.Application), ignoreServiceNames: arrayToStringMap(serviceNames)}
 }
@@ -77,7 +77,7 @@ func (r *EurekaAdapter) Ping() error {
 
 	//Store current situation as known in Eureka for a while
 	for _, application := range eurekaApps.Applications {
-		r.knownApplications[application.Name] = application
+		r.knownApplications[strings.ToLower(application.Name)] = application
 	}
 	log.Println("Already registered number of applications: " , len(r.knownApplications))
 
@@ -201,7 +201,7 @@ func getCheckInterval(service *bridge.Service) int {
 }
 
 func (r *EurekaAdapter) skipService(service *bridge.Service) bool {
-	_, serviceNameMatched := r.ignoreServiceNames[service.Name]
+	_, serviceNameMatched := r.ignoreServiceNames[strings.ToLower(service.Name)]
 	return service.Port == 51234 && serviceNameMatched
 }
 
@@ -261,7 +261,7 @@ func (r *EurekaAdapter) Register(service *bridge.Service) error {
 }
 
 func (r *EurekaAdapter) findOldRegistration(registration *eureka.InstanceInfo) (*eureka.InstanceInfo, bool) {
-	application, found := r.knownApplications[registration.App]
+	application, found := r.knownApplications[strings.ToLower(registration.App)]
 	if found {
 		for _, instance := range application.Instances {
 			if instance.InstanceId == registration.InstanceId {
