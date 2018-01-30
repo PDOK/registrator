@@ -119,6 +119,7 @@ func createMetadataMap(registration *eureka.InstanceInfo) {
 	if registration.Metadata == nil {
 		registration.Metadata = &eureka.MetaData{
 			Map: make(map[string]string),
+			Class: "java.util.LinkedHashMap",
 		}
 	}
 }
