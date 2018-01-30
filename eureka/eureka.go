@@ -105,13 +105,13 @@ func instanceInformation(service *bridge.Service) *eureka.InstanceInfo {
 
 	registration := eureka.NewInstanceInfo(instanceId, ipadres, application, ipadres, port, false, status) //Create a new instance to register
 
-	if path := service.Attrs["context_path"]; path != "" {
+	if contextPath := service.Attrs["context_path"]; contextPath != "" {
 		createMetadataMap(registration)
-		registration.Metadata.Map["context-path"] = path
+		registration.Metadata.Map["context-path"] = contextPath
 	}
-	if path := service.Attrs["depends_on"]; path != "" {
+	if dependsOn := service.Attrs["depends_on"]; dependsOn != "" {
 		createMetadataMap(registration)
-		registration.Metadata.Map["depends_on"] = path
+		registration.Metadata.Map["depends-on"] = dependsOn
 	}
 	return registration
 }
